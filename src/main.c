@@ -31,6 +31,10 @@
 #include "log/log.h"
 #include "rtty.h"
 
+#ifndef RTTY_VERSION_STRING
+#define RTTY_VERSION_STRING "andorid 0.1"
+#endif
+
 enum {
     LONG_OPT_HELP = 1
 };

@@ -29,7 +29,9 @@
 #include <fcntl.h>
 #include <errno.h>
 #include <limits.h>
+#ifndef ANDROID
 #include <shadow.h>
+#endif
 #include <sys/stat.h>
 #include <math.h>
 #include <pwd.h>
@@ -47,6 +49,7 @@ static void run_task(struct task *t);
 /* For execute command */
 static bool login_test(const char *username, const char *password)
 {
+    #ifndef ANDROID
     struct spwd *sp;
 
     if (!username || *username == 0)
@@ -60,6 +63,10 @@ static bool login_test(const char *username, const char *password)
         password = "";
 
     return !strcmp(crypt(password, sp->sp_pwdp), sp->sp_pwdp);
+    #else
+    return true;
+    #endif
+
 }
 
 static const char *cmd_lookup(const char *cmd)
@@ -250,7 +257,7 @@ static void run_task(struct task *t)
     int opipe[2];
     int epipe[2];
     pid_t pid;
-    int err;
+    int err = 0;
 
     if (pipe2(opipe, O_CLOEXEC | O_NONBLOCK) < 0 ||
             pipe2(epipe, O_CLOEXEC | O_NONBLOCK) < 0) {

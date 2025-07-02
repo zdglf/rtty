@@ -146,7 +146,7 @@ static void pty_on_exit(struct ev_loop *loop, struct ev_child *w, int revents)
     buffer_put_u16be(wb, 32);
     buffer_put_data(wb, tty->sid, 32);
     ev_io_start(loop, &rtty->iow);
-
+    log_info("%s %d\n",__FUNCTION__ ,__LINE__);
     del_tty(tty);
 }
 
@@ -302,7 +302,7 @@ void rtty_exit(struct rtty *rtty)
 
     buffer_free(&rtty->rb);
     buffer_free(&rtty->wb);
-
+    log_info("%s %d\n",__FUNCTION__ ,__LINE__);
     list_for_each_entry_safe(tty, ntty, &rtty->ttys, node) {
         del_tty(tty);
     }
@@ -378,6 +378,7 @@ static void parse_tty_msg(struct rtty *rtty, int type, int len)
         tty_login(rtty, sid);
         break;
     case MSG_TYPE_LOGOUT:
+        log_info("%s %d\n",__FUNCTION__ ,__LINE__);
         del_tty(tty);
         break;
     case MSG_TYPE_TERMDATA:
@@ -562,6 +563,7 @@ static void on_net_read(struct ev_loop *loop, struct ev_io *w, int revents)
     return;
 
 err:
+    log_info("%s %d\n",__FUNCTION__ ,__LINE__);
     rtty_exit(rtty);
 }
 
@@ -608,6 +610,7 @@ static void on_net_write(struct ev_loop *loop, struct ev_io *w, int revents)
     return;
 
 err:
+    log_info("%s %d\n",__FUNCTION__ ,__LINE__);
     rtty_exit(rtty);
 }
 
@@ -697,10 +700,13 @@ int rtty_start(struct rtty *rtty)
         return -1;
     }
 
-    if (find_login(login_path, sizeof(login_path) - 1) < 0) {
-        log_err("the program 'login' is not found\n");
-        return -1;
-    }
+    #ifndef ANDROID
+        if (find_login(login_path, sizeof(login_path) - 1) < 0) {
+            log_err("the program 'login' is not found\n");
+            return -1;
+        }
+    #endif
+
 
     rtty_run_state(RTTY_STATE_DISCONNECTED);
 
