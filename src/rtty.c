@@ -38,10 +38,13 @@
 #include "command.h"
 #include "log/log.h"
 
+#ifndef ANDROID
 static char login_path[128];       /* /bin/login */
+#endif
 
 static void del_tty(struct tty *tty)
 {
+    log_info("%s %d\n",__FUNCTION__ ,__LINE__);
     struct rtty *rtty = tty->rtty;
     struct ev_loop *loop = rtty->loop;
 
@@ -67,6 +70,7 @@ static void del_tty(struct tty *tty)
 
 static inline struct tty *find_tty(struct rtty *rtty, const char *sid)
 {
+    log_info("%s %d\n",__FUNCTION__ ,__LINE__);
     struct tty *tty;
 
     list_for_each_entry(tty, &rtty->ttys, node) {
@@ -79,6 +83,7 @@ static inline struct tty *find_tty(struct rtty *rtty, const char *sid)
 
 static void pty_on_read(struct ev_loop *loop, struct ev_io *w, int revents)
 {
+    log_info("%s %d\n",__FUNCTION__ ,__LINE__);
     struct tty *tty = container_of(w, struct tty, ior);
     struct rtty *rtty = tty->rtty;
     struct buffer *wb = &rtty->wb;
@@ -122,6 +127,8 @@ static void pty_on_read(struct ev_loop *loop, struct ev_io *w, int revents)
 
 static void pty_on_write(struct ev_loop *loop, struct ev_io *w, int revents)
 {
+    
+    log_info("%s %d\n",__FUNCTION__ ,__LINE__);
     struct tty *tty = container_of(w, struct tty, iow);
     struct buffer *wb = &tty->wb;
     int ret;
@@ -166,6 +173,7 @@ static void tty_timer_cb(struct ev_loop *loop, struct ev_timer *w, int revents)
 
 static void tty_login(struct rtty *rtty, const char *sid)
 {
+    log_info("%s %d\n",__FUNCTION__ ,__LINE__);
     struct tty *tty = NULL;
     int code = 1;
     pid_t pid;
@@ -191,13 +199,19 @@ static void tty_login(struct rtty *rtty, const char *sid)
         log_err("forkpty: %s\n", strerror(errno));
         goto done;
     }
-
+    log_info("pid %d\n", pid);
     if (pid == 0) {
+        int result = -1;
+        #ifndef ANDROID
         if (rtty->username)
-            execl(login_path, "login", "-f", rtty->username, NULL);
+            result = execl(login_path, "login", "-f", rtty->username, NULL);
         else
-            execl(login_path, "login", NULL);
+            result = execl(login_path, "login", NULL);
 
+        #else
+            result = execl("/bin/sh", "sh", "-c", "sh", NULL);
+        #endif
+        log_info("exit:%d", result);
         exit(1);
     }
 
@@ -238,6 +252,7 @@ done:
 
 static void write_data_to_tty(struct tty *tty, int len)
 {
+    log_info("%s %d\n",__FUNCTION__ ,__LINE__);
     struct rtty *rtty = tty->rtty;
 
     tty->active = ev_now(rtty->loop);
@@ -249,6 +264,7 @@ static void write_data_to_tty(struct tty *tty, int len)
 
 static void set_tty_winsize(struct tty *tty)
 {
+    log_info("%s %d\n",__FUNCTION__ ,__LINE__);
     struct rtty *rtty = tty->rtty;
     struct winsize size = {};
 
@@ -261,8 +277,14 @@ static void set_tty_winsize(struct tty *tty)
 
 static void rtty_run_state(int state)
 {
+    log_info("%s %d\n",__FUNCTION__ ,__LINE__);
     static int st = RTTY_STATE_DISCONNECTED;
+    #ifdef ANDROID
+    const char *file = "/sdcard/rtty";
+    #else
     const char *file = "/var/run/rtty";
+    #endif
+    
     const char *str_state;
     FILE *fp;
 
@@ -292,6 +314,7 @@ static void rtty_run_state(int state)
 
 void rtty_exit(struct rtty *rtty)
 {
+    log_info("%s %d\n",__FUNCTION__ ,__LINE__);
     struct tty *tty, *ntty;
 
     if (rtty->sock < 0)
@@ -327,6 +350,7 @@ void rtty_exit(struct rtty *rtty)
 
 static void rtty_register(struct rtty *rtty)
 {
+    log_info("%s %d\n",__FUNCTION__ ,__LINE__);
     size_t len = 4 + strlen(rtty->devid);
     struct buffer *wb = &rtty->wb;
 
@@ -357,6 +381,7 @@ static void rtty_register(struct rtty *rtty)
 
 static void parse_tty_msg(struct rtty *rtty, int type, int len)
 {
+    log_info("%s %d\n",__FUNCTION__ ,__LINE__);
     struct buffer *b = &rtty->rb;
     struct tty *tty = NULL;
     char sid[33] = "";
@@ -402,6 +427,7 @@ static void parse_tty_msg(struct rtty *rtty, int type, int len)
 
 static int parse_msg(struct rtty *rtty)
 {
+    log_info("%s %d\n",__FUNCTION__ ,__LINE__);
     struct buffer *rb = &rtty->rb;
     int msgtype;
     int msglen;
@@ -466,6 +492,7 @@ static int parse_msg(struct rtty *rtty)
 #ifdef SSL_SUPPORT
 static void on_ssl_verify_error(int error, const char *str, void *arg)
 {
+    log_info("%s %d\n",__FUNCTION__ ,__LINE__);
     bool *valid_cert = arg;
 
     *valid_cert = false;
@@ -476,6 +503,7 @@ static void on_ssl_verify_error(int error, const char *str, void *arg)
 /* -1 error, 0 pending, 1 ok */
 static int ssl_negotiated(struct rtty *rtty)
 {
+    log_info("%s %d\n",__FUNCTION__ ,__LINE__);
     bool valid_cert = true;
     char err_buf[128];
     int ret;
@@ -504,6 +532,7 @@ static int ssl_negotiated(struct rtty *rtty)
 
 static int rtty_ssl_read(int fd, void *buf, size_t count, void *arg)
 {
+    log_info("%s %d\n",__FUNCTION__ ,__LINE__);
     static char err_buf[128];
     struct rtty *rtty = arg;
     int ret;
@@ -523,6 +552,7 @@ static int rtty_ssl_read(int fd, void *buf, size_t count, void *arg)
 
 static void on_net_read(struct ev_loop *loop, struct ev_io *w, int revents)
 {
+    log_info("%s %d\n",__FUNCTION__ ,__LINE__);
     struct rtty *rtty = container_of(w, struct rtty, ior);
     bool eof = false;
     int ret;
@@ -569,6 +599,7 @@ err:
 
 static void on_net_write(struct ev_loop *loop, struct ev_io *w, int revents)
 {
+    log_info("%s %d\n",__FUNCTION__ ,__LINE__);
     struct rtty *rtty = container_of(w, struct rtty, iow);
     int ret;
 
@@ -616,6 +647,7 @@ err:
 
 static void on_net_connected(int sock, void *arg)
 {
+    log_info("%s %d\n",__FUNCTION__ ,__LINE__);
     struct rtty *rtty = arg;
 
     if (sock < 0) {
@@ -690,6 +722,7 @@ static void rtty_timer_cb(struct ev_loop *loop, struct ev_timer *w, int revents)
 
 int rtty_start(struct rtty *rtty)
 {
+    log_info("%s %d\n",__FUNCTION__ ,__LINE__);
     if (!rtty->devid) {
         log_err("you must specify an id for your device\n");
         return -1;
@@ -727,6 +760,7 @@ int rtty_start(struct rtty *rtty)
 
 void rtty_send_msg(struct rtty *rtty, int type, void *data, int len)
 {
+    log_info("%s %d\n",__FUNCTION__ ,__LINE__);
     struct buffer *wb = &rtty->wb;
     buffer_put_u8(wb, type);
     buffer_put_u16be(wb, len);
