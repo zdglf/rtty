@@ -135,7 +135,11 @@ struct mntent *find_mount_point(const char *name)
     if (S_ISBLK(s.st_mode) || S_ISCHR(s.st_mode))
         return NULL;
 
+    #ifdef ANDROID
+    mtab_fp = setmntent("/proc/mounts", "r");
+    #else
     mtab_fp = setmntent("/etc/mtab", "r");
+    #endif
     if (!mtab_fp)
         return NULL;
 
