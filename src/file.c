@@ -214,8 +214,11 @@ bool detect_file_operation(uint8_t *buf, int len, const char *sid, struct file_c
         kill(pid, SIGTERM);
         return true;
     }
-
+    #ifdef ANDROID
+    sprintf(fifo_name, "/sdcard/Android/rtty-file-%d.fifo", pid);
+    #else
     sprintf(fifo_name, "/tmp/rtty-file-%d.fifo", pid);
+    #endif
 
     ctlfd = open(fifo_name, O_WRONLY);
     if (ctlfd < 0) {
@@ -291,7 +294,7 @@ static void start_download_file(struct file_context *ctx, struct buffer *info, i
     int fd;
 
     ctx->total_size = ctx->remain_size = buffer_pull_u32be(info);
-
+    
     ment = find_mount_point(savepath);
     if (ment) {
         uint64_t avail;

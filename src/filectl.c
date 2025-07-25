@@ -189,8 +189,11 @@ void request_transfer_file(char type, const char *path)
 
         total_size = st.st_size;
     }
-
+    #ifdef ANDROID
+    sprintf(fifo_name, "/sdcard/Android/rtty-file-%d.fifo", pid);
+    #else
     sprintf(fifo_name, "/tmp/rtty-file-%d.fifo", pid);
+    #endif
 
     if (mkfifo(fifo_name, 0644) < 0) {
         fprintf(stderr, "Could not create fifo %s\n", fifo_name);
